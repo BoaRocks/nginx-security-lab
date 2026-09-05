@@ -1,39 +1,53 @@
-# events {}
+# NGINX Security & Reverse Proxy Lab
 
-http {
-    limit_req_zone $binary_remote_addr zone=api_limit:10m rate=10r/s;
+A hands-on infrastructure and security lab demonstrating NGINX reverse proxy configuration, HTTPS/TLS termination, rate limiting, Docker networking, and technical troubleshooting.
 
-    server {
-        listen 80;
-        server_name localhost;
+## Overview
 
-        return 301 https://$host$request_uri;
-    }
+This project creates a small reverse-proxy environment using NGINX and Docker Compose.
 
-    server {
-        listen 443 ssl;
-        server_name localhost;
+Client requests are received by an NGINX reverse proxy and forwarded to a backend web service. The configuration demonstrates several common web infrastructure and security concepts including HTTPS redirection, TLS termination, request rate limiting, proxy headers, and security headers.
 
-        ssl_certificate /etc/nginx/certs/server.crt;
-        ssl_certificate_key /etc/nginx/certs/server.key;
+## Technologies
 
-        ssl_protocols TLSv1.2 TLSv1.3;
+- Linux
+- NGINX
+- Docker
+- Docker Compose
+- HTTP/HTTPS
+- TLS
+- OpenSSL
 
-        add_header X-Content-Type-Options nosniff always;
-        add_header X-Frame-Options DENY always;
+## Architecture
 
-        resolver 127.0.0.11 valid=30s;
+Client  
+↓  
+NGINX Reverse Proxy  
+↓  
+Backend Web Service
 
-        location / {
-            limit_req zone=api_limit burst=20 nodelay;
+## Features
 
-            set $backend http://backend:80;
-            proxy_pass $backend;
+- NGINX reverse proxy
+- HTTP to HTTPS redirection
+- TLS 1.2 and TLS 1.3
+- Self-signed TLS certificates for local testing
+- Per-client request rate limiting
+- Reverse-proxy forwarding headers
+- Basic HTTP security headers
+- Containerized backend service
 
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-        }
-    }
-}
+## Repository Files
+
+- `nginx.conf` — NGINX reverse proxy and security configuration
+- `docker-compose.yml` — Proxy and backend container environment
+- `generate-certs.sh` — Generates local TLS certificates
+- `.gitignore` — Prevents certificates and local files from being committed
+
+## Running the Lab
+
+Generate the local TLS certificate:
+
+```bash
+chmod +x generate-certs.sh
+./generate-certs.sh
