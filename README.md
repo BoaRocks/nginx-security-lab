@@ -1,30 +1,39 @@
-# NGINX Security & Reverse Proxy Lab
+# events {}
 
-A hands-on lab demonstrating NGINX reverse proxy configuration, TLS concepts,
-rate limiting, and web-service troubleshooting.
+http {
+    limit_req_zone $binary_remote_addr zone=api_limit:10m rate=10r/s;
 
-## Technologies
-- Linux
-- NGINX
-- HTTP/HTTPS
-- TLS
-- Docker
+    server {
+        listen 80;
+        server_name localhost;
 
-## What This Lab Demonstrates
-- Configuring NGINX as a reverse proxy
-- Forwarding requests to a backend service
-- Applying request rate limiting
-- Understanding TLS termination
-- Troubleshooting HTTP and proxy configuration
+        return 301 https://$host$request_uri;
+    }
 
-## Files
-- `nginx.conf` - NGINX reverse proxy and rate-limiting configuration
-- `docker-compose.yml` - Reproducible local lab environment
+    server {
+        listen 443 ssl;
+        server_name localhost;
 
-## Troubleshooting Approach
-I use logs, configuration validation, HTTP status codes, and connectivity
-checks to isolate issues between the client, proxy, and backend service.
+        ssl_certificate /etc/nginx/certs/server.crt;
+        ssl_certificate_key /etc/nginx/certs/server.key;
 
-## Skills Demonstrated
-Linux administration, networking, web-service configuration, troubleshooting,
-security concepts, and technical documentation.
+        ssl_protocols TLSv1.2 TLSv1.3;
+
+        add_header X-Content-Type-Options nosniff always;
+        add_header X-Frame-Options DENY always;
+
+        resolver 127.0.0.11 valid=30s;
+
+        location / {
+            limit_req zone=api_limit burst=20 nodelay;
+
+            set $backend http://backend:80;
+            proxy_pass $backend;
+
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+    }
+}
