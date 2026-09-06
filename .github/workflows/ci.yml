@@ -1,0 +1,45 @@
+name: NGINX CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate TLS certificates
+        run: |
+          chmod +x generate-certs.sh
+          ./generate-certs.sh
+
+      - name: Validate Docker Compose
+        run: docker compose config
+
+      - name: Start lab
+        run: docker compose up -d
+
+      - name: Validate NGINX configuration
+        run: docker compose exec -T proxy nginx -t
+
+      - name: Test HTTPS endpoint
+        run: |
+          for i in {1..20}; do
+            if curl -ksSf https://localhost:8443 > /dev/null; then
+              echo "HTTPS endpoint is responding."
+              exit 0
+            fi
+            sleep 1
+          done
+
+          echo "HTTPS endpoint did not become ready."
+          docker compose logs
+          exit 1
+
+      - name: Shut down lab
+        if: always()
+        run: docker compose down -v
